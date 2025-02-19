@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/table";
 import * as XLSX from "xlsx";
 
-const data: Students[] = [
+const teachersData: Teachers[] = [
   {
     name: "Ken",
     email: "ken99@yahoo.com",
@@ -68,14 +68,14 @@ const data: Students[] = [
   },
 ];
 
-export type Students = {
+export type Teachers = {
   name: string;
   email: string;
   phone: string;
   attendance: string; // Attendance status
 };
 
-export const columns: ColumnDef<Students>[] = [
+export const columns: ColumnDef<Teachers>[] = [
   {
     accessorKey: "name",
     header: ({ column }) => (
@@ -124,7 +124,7 @@ export const columns: ColumnDef<Students>[] = [
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => {
-      const student = row.original;
+      const teacher = row.original;
 
       return (
         <DropdownMenu>
@@ -137,7 +137,7 @@ export const columns: ColumnDef<Students>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(student.email)}
+              onClick={() => navigator.clipboard.writeText(teacher.email)}
             >
               Copy Email
             </DropdownMenuItem>
@@ -160,13 +160,13 @@ export default function DataTableDemo() {
     pageIndex: 0,
     pageSize: 5,
   });
-  const [selectedStudent, setSelectedStudent] = React.useState<Students | null>(
+  const [selectedTeacher, setSelectedTeacher] = React.useState<Teachers | null>(
     null
   );
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   const table = useReactTable({
-    data,
+    data: teachersData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -185,91 +185,89 @@ export default function DataTableDemo() {
   });
 
   const downloadExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(data);
+    const worksheet = XLSX.utils.json_to_sheet(teachersData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Students");
-    XLSX.writeFile(workbook, "Students.xlsx");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Teachers");
+    XLSX.writeFile(workbook, "Teachers.xlsx");
   };
 
   const downloadAttendanceExcel = () => {
-    const attendanceData = data.map(student => {
-      const studentAttendance: { [key: string]: string } = {};
+    const attendanceData = teachersData.map(teacher => {
+      const teacherAttendance: { [key: string]: string } = {};
       Array.from({ length: 7 }, (_, index) => {
         const date = new Date();
         date.setDate(date.getDate() - index);
-        studentAttendance[date.toDateString()] = student.attendance; // Attendance status for each date
+        teacherAttendance[date.toDateString()] = teacher.attendance; // Attendance status for each date
       });
       return {
-        Name: student.name,
-        Email: student.email,
-        Phone: student.phone,
-        ...studentAttendance, // Spread attendance data into the object
+        Name: teacher.name,
+        Email: teacher.email,
+        Phone: teacher.phone,
+        ...teacherAttendance, // Spread attendance data into the object
       };
     });
 
     // Create a workbook with the attendance data
     const worksheet = XLSX.utils.json_to_sheet(attendanceData);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance");
-    XLSX.writeFile(workbook, "Attendance.xlsx");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Teachers Attendance");
+    XLSX.writeFile(workbook, "Teacher.xlsx");
   };
 
-  const handleRowClick = (student: Students) => {
-    setSelectedStudent(student);
+  const handleRowClick = (teacher: Teachers) => {
+    setSelectedTeacher(teacher);
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setSelectedStudent(null);
+    setSelectedTeacher(null);
   };
 
   return (
     <div className="overflow-x-auto w-full p-6">
       <div className="w-full">
-        <div className="flex flex-col md:flex-row items-center py-4">
+        <div className="flex items-center py-4">
           <Input
             placeholder="Filter emails..."
             value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
             onChange={(event) =>
               table.getColumn("email")?.setFilterValue(event.target.value)
             }
-            className="max-w-sm mb-4 md:mb-0"
+            className="max-w-sm"
           />
-          <div className="flex flex-col md:flex-row md:ml-4">
-            <Button variant="outline" className="mb-2 md:mb-0 md:mr-2" onClick={downloadExcel}>
-              Download Students
-            </Button>
-            <Button variant="outline" className="mb-2 md:mb-0 md:mr-2" onClick={downloadAttendanceExcel}>
-              Download Attendance
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="ml-auto">
-                  Columns <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {table
-                  .getAllColumns()
-                  .filter((column) => column.getCanHide())
-                  .map((column) => {
-                    return (
-                      <DropdownMenuCheckboxItem
-                        key={column.id}
-                        className="capitalize"
-                        checked={column.getIsVisible()}
-                        onCheckedChange={(value) =>
-                          column.toggleVisibility(!!value)
-                        }
-                      >
-                        {column.id}
-                      </DropdownMenuCheckboxItem>
-                    );
-                  })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <Button variant="outline" className="ml-4" onClick={downloadExcel}>
+            Download Teachers
+          </Button>
+          <Button variant="outline" className="ml-4" onClick={downloadAttendanceExcel}>
+            Download Attendance
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="ml-auto">
+                Columns <ChevronDown className="ml-2 h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => {
+                  return (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      className="capitalize"
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) =>
+                        column.toggleVisibility(!!value)
+                      }
+                    >
+                      {column.id}
+                    </DropdownMenuCheckboxItem>
+                  );
+                })}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="rounded-md border">
           <Table>
@@ -353,7 +351,7 @@ export default function DataTableDemo() {
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
           <div className="bg-white w-11/12 max-w-4xl p-6 rounded-md shadow-lg flex flex-col space-y-4 overflow-y-auto">
-            <h2 className="text-xl font-bold">Attendance for {selectedStudent?.name}</h2>
+            <h2 className="text-xl font-bold">Attendance for {selectedTeacher?.name}</h2>
             <div className="mt-4">
               <Table>
                 <TableHeader>
@@ -367,7 +365,7 @@ export default function DataTableDemo() {
                   {Array.from({ length: 7 }, (_, index) => {
                     const date = new Date();
                     date.setDate(date.getDate() - index);
-                    const status = data.find(student => student.name === selectedStudent?.name)?.attendance || "N/A";
+                    const status = teachersData.find(teacher => teacher.name === selectedTeacher?.name)?.attendance || "N/A";
                     return (
                       <TableRow key={index}>
                         <TableCell>{date.toDateString()}</TableCell>
