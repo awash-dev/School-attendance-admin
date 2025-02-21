@@ -37,3 +37,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 # School-attendance-admin
 # School-attendance-admin
 # School-attendance-admin
+# school-admin

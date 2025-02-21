@@ -1,161 +1,58 @@
 "use client";
-
 import * as React from "react";
+import { useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore"; // Import Firestore functions
+import { db } from "@/Firebase"; // Adjust the path as necessary
 import {
-  ColumnDef,
-  ColumnFiltersState,
-  SortingState,
-  VisibilityState,
-  flexRender,
+  useReactTable,
   getCoreRowModel,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  useReactTable,
+  getFilteredRowModel,
+  flexRender,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import {
   Table,
-  TableBody,
-  TableCell,
-  TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import * as XLSX from "xlsx";
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table"; // Adjust the import path for ShadCN UI
+import { Button } from "@/components/ui/button"; // Adjust the import path for ShadCN UI
+import { Input } from "@/components/ui/input"; // Adjust the import path for ShadCN UI
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu"; // Adjust the import path for ShadCN UI
+import { ChevronDown } from "lucide-react"; // Assuming you're still using lucide-react for icons
+import * as XLSX from "xlsx"; // Import the xlsx library
 
-const teachersData: Teachers[] = [
-  {
-    name: "Ken",
-    email: "ken99@yahoo.com",
-    phone: "123-456-7890",
-    attendance: "Present",
-  },
-  {
-    name: "Abe",
-    email: "Abe45@gmail.com",
-    phone: "234-567-8901",
-    attendance: "Absent",
-  },
-  {
-    name: "Monserrat",
-    email: "Monserrat44@gmail.com",
-    phone: "345-678-9012",
-    attendance: "Late",
-  },
-  {
-    name: "Silas",
-    email: "Silas22@gmail.com",
-    phone: "456-789-0123",
-    attendance: "Present",
-  },
-  {
-    name: "Carmella",
-    email: "carmella@hotmail.com",
-    phone: "567-890-1234",
-    attendance: "Absent",
-  },
-];
-
-export type Teachers = {
-  name: string;
-  email: string;
-  phone: string;
-  attendance: string; // Attendance status
+export type Attendance = {
+  id: string;
+  date: string; // Date of attendance
+  status: string; // Attendance status
+  name: string; // Name of the teacher
 };
 
-export const columns: ColumnDef<Teachers>[] = [
-  {
-    accessorKey: "name",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Name
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    cell: ({ row }) => <div>{row.getValue("name")}</div>,
-  },
-  {
-    accessorKey: "email",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Email
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    cell: ({ row }) => <div className="lowercase">{row.getValue("email")}</div>,
-  },
-  {
-    accessorKey: "phone",
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Phone
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    ),
-    cell: ({ row }) => <div>{row.getValue("phone")}</div>,
-  },
-  {
-    accessorKey: "attendance",
-    header: "Attendance",
-    cell: ({ row }) => <div>{row.getValue("attendance")}</div>,
-  },
-  {
-    id: "actions",
-    enableHiding: false,
-    cell: ({ row }) => {
-      const teacher = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(teacher.email)}
-            >
-              Copy Email
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
-  },
-];
+export type Teachers = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string; // Assuming there's an email field
+};
 
 export default function DataTableDemo() {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    []
-  );
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>({});
+  const [teachersData, setTeachersData] = useState<Teachers[]>([]); // State for teachers data
+  const [attendanceData, setAttendanceData] = useState<Attendance[]>([]); // State for attendance data
+  const [sorting, setSorting] = React.useState([]);
+  const [columnFilters, setColumnFilters] = React.useState([]);
+  const [columnVisibility, setColumnVisibility] = React.useState({
+    name: true,
+    phone: true,
+  });
   const [pagination, setPagination] = React.useState({
     pageIndex: 0,
     pageSize: 5,
@@ -165,8 +62,65 @@ export default function DataTableDemo() {
   );
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
+  useEffect(() => {
+    const fetchTeachersData = async () => {
+      const querySnapshot = await getDocs(collection(db, "student-atendance"));
+      const data = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Teachers[];
+      setTeachersData(data);
+    };
+
+    fetchTeachersData();
+  }, []);
+
+  // Fetch attendance data
+  useEffect(() => {
+    const fetchAttendanceData = async () => {
+      const querySnapshot = await getDocs(collection(db, "student-atendance")); // Change to the correct collection for attendance
+      const data = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Attendance[];
+      setAttendanceData(data);
+    };
+
+    fetchAttendanceData();
+  }, []);
+
+  // Remove duplicates based on name and email
+  const uniqueTeachersData = React.useMemo(() => {
+    const uniqueMap = new Map();
+    teachersData.forEach((teacher) => {
+      const key = `${teacher.name}-${teacher.email}`; // Create a unique key based on name and email
+      if (!uniqueMap.has(key)) {
+        uniqueMap.set(key, teacher);
+      }
+    });
+    return Array.from(uniqueMap.values());
+  }, [teachersData]);
+
+  const columns = React.useMemo(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Name",
+      },
+      // {
+      //   accessorKey: "phone",
+      //   header: "Phone",
+      // },
+      // {
+      //   accessorKey: "email",
+      //   header: "email",
+      // },
+    ],
+    []
+  );
+
   const table = useReactTable({
-    data: teachersData,
+    data: uniqueTeachersData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -184,34 +138,9 @@ export default function DataTableDemo() {
     },
   });
 
-  const downloadExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(teachersData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Teachers");
-    XLSX.writeFile(workbook, "Teachers.xlsx");
-  };
-
-  const downloadAttendanceExcel = () => {
-    const attendanceData = teachersData.map(teacher => {
-      const teacherAttendance: { [key: string]: string } = {};
-      Array.from({ length: 7 }, (_, index) => {
-        const date = new Date();
-        date.setDate(date.getDate() - index);
-        teacherAttendance[date.toDateString()] = teacher.attendance; // Attendance status for each date
-      });
-      return {
-        Name: teacher.name,
-        Email: teacher.email,
-        Phone: teacher.phone,
-        ...teacherAttendance, // Spread attendance data into the object
-      };
-    });
-
-    // Create a workbook with the attendance data
-    const worksheet = XLSX.utils.json_to_sheet(attendanceData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Teachers Attendance");
-    XLSX.writeFile(workbook, "Teacher.xlsx");
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedTeacher(null);
   };
 
   const handleRowClick = (teacher: Teachers) => {
@@ -219,9 +148,18 @@ export default function DataTableDemo() {
     setIsModalOpen(true);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedTeacher(null);
+  const downloadXLSX = (data: Attendance[], filename: string) => {
+    // Restructure data to place dates at the top
+    const formattedData = data.map(attendance => ({
+      Date: attendance.date,
+      Name: attendance.name,
+      Status: attendance.status,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(formattedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Data");
+    XLSX.writeFile(workbook, filename);
   };
 
   return (
@@ -229,22 +167,25 @@ export default function DataTableDemo() {
       <div className="w-full">
         <div className="flex items-center py-4">
           <Input
-            placeholder="Filter emails..."
-            value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+            placeholder="Filter by name..."
+            value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
             onChange={(event) =>
-              table.getColumn("email")?.setFilterValue(event.target.value)
+              table.getColumn("name")?.setFilterValue(event.target.value)
             }
             className="max-w-sm"
           />
-          <Button variant="outline" className="ml-4" onClick={downloadExcel}>
-            Download Teachers
-          </Button>
-          <Button variant="outline" className="ml-4" onClick={downloadAttendanceExcel}>
+
+          <Button
+            variant="outline"
+            className="ml-auto"
+            onClick={() => downloadXLSX(attendanceData, "attendance-student.xlsx")}
+          >
             Download Attendance
           </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto">
+              <Button variant="outline" className="ml-2">
                 Columns <ChevronDown className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -252,20 +193,18 @@ export default function DataTableDemo() {
               {table
                 .getAllColumns()
                 .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  );
-                })}
+                .map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) =>
+                      column.toggleVisibility(!!value)
+                    }
+                  >
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                ))}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -274,23 +213,21 @@ export default function DataTableDemo() {
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    );
-                  })}
+                  {headerGroup.headers.map((header) => (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </TableHead>
+                  ))}
                 </TableRow>
               ))}
             </TableHeader>
             <TableBody>
-              {table.getRowModel().rows?.length ? (
+              {table.getRowModel().rows.length ? (
                 table.getRowModel().rows.map((row) => (
                   <TableRow
                     key={row.id}
@@ -348,34 +285,38 @@ export default function DataTableDemo() {
       </div>
 
       {/* Modal for Attendance Table */}
-      {isModalOpen && (
+      {isModalOpen && selectedTeacher && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
           <div className="bg-white w-11/12 max-w-4xl p-6 rounded-md shadow-lg flex flex-col space-y-4 overflow-y-auto">
-            <h2 className="text-xl font-bold">Attendance for {selectedTeacher?.name}</h2>
+            <h2 className="text-xl font-bold">
+              Attendance for {selectedTeacher.name}
+            </h2>
             <div className="mt-4">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Name</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {/* Replace with actual attendance data */}
-                  {Array.from({ length: 7 }, (_, index) => {
-                    const date = new Date();
-                    date.setDate(date.getDate() - index);
-                    const status = teachersData.find(teacher => teacher.name === selectedTeacher?.name)?.attendance || "N/A";
-                    return (
-                      <TableRow key={index}>
-                        <TableCell>{date.toDateString()}</TableCell>
-                        <TableCell>{status}</TableCell>
+                  {attendanceData
+                    .filter(
+                      (attendance) =>
+                        attendance.name === selectedTeacher.name
+                    )
+                    .map((attendance) => (
+                      <TableRow key={attendance.id}>
+                        <TableCell>{selectedTeacher.name}</TableCell>
+                        <TableCell>{attendance.date}</TableCell>
+                        <TableCell>{attendance.status}</TableCell>
                       </TableRow>
-                    );
-                  })}
+                    ))}
                 </TableBody>
               </Table>
             </div>
+
             <Button onClick={closeModal} className="mt-4">
               Close
             </Button>
